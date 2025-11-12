@@ -9,7 +9,8 @@ Install the package using:
 
 ```r
 devtools::install_github('tienmt/tobitbayes')
-
+```
+## Examples
 ```r
 library(tobitbayes)
 
