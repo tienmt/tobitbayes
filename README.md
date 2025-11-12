@@ -10,6 +10,7 @@ Install the package using:
 ```r
 devtools::install_github('tienmt/tobitbayes')
 
+```r
 library(tobitbayes)
 
 # simulate data
