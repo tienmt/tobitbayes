@@ -34,6 +34,9 @@ res <- tobit_bayes(y, X)
 plot(posterior_means, type = 'h',
      main = "Posterior Means of Beta",
      ylab = "Mean")
+```
 
 ### get the selected variables from the Gibbs sampler
+
+```r
 res$selected
