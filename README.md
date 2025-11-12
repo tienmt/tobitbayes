@@ -27,7 +27,7 @@ y[y < 0] <- 0
 res <- tobit_bayes(y, X)
 ```
 
-# get the posterior mean and compare it to the true beta0
+## get the posterior mean and compare it to the true beta0
 ```r
 (posterior_means <- colMeans(res$beta_samples))
 # plot output
