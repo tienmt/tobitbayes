@@ -292,7 +292,7 @@ tobit_bayes_backCHol <- function(y, X, c_sensored = 0,
 n <- 100
 n_test <- 1000
 n_all = n + n_test
-p <- 120
+p <- 300
 xall <- matrix(rnorm(n_all * p), n_all, p)
 X <- xall[1:n,]
 xtest <- xall[-(1:n),]
@@ -315,3 +315,4 @@ tic(); res3 <- tobit_bayes_backCHol(y, X,  n_iter = 5000,  burn_in = 1000); toc(
 colMeans(res$beta_samples) [1:s0]
 colMeans(res2$beta_samples) [1:s0]
 colMeans(res3$beta_samples) [1:s0]
+
