@@ -60,8 +60,9 @@ for (ss in 1:100) {
   
   print(ss)
 }
-rm(Sigma,LL,X)
+rm(Sigma,LL,X,xall)
 save.image(file = 'tobit_p120n100_s04_.rda')
+
 
 
 
