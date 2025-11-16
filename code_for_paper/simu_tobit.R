@@ -11,44 +11,59 @@ sourceCpp('tobit_SnS.cpp')
 source('Gibbs_tobit_hs.R')
 
 # Simulate data
-n <- 100
-n_test <- 1000
+n <- 100            # sample size
+n_test <- 1000      # test sample size
 n_all = n + n_test
-p <- 120
-s0 = 4
-beta_true <- rep(0, p) ; beta_true[1:s0] <- c( rep(1, s0/2) , rep(-1, s0/2) )
+p <- 120            # dimension of design matrix X, number of predictors/covariates
+s0 = 4              # sparsity levels, number of non-zero component in beta_true
+beta_true <- rep(0, p) 
+beta_true[1:s0] <- c( rep(1, s0/2) , rep(-1, s0/2) )
+# design matrix X can be independent with rho <- 0 or correlated with rho <- 0.5
 rho <- 0.
 Sigma <- outer(1:p, 1:p, function(i, j)rho^abs(i - j))
 LL = chol(Sigma) 
 
-HSout = tblassoout = scad_out = SnS_out = list()
+HSout = tblassoout = scad_out = SnS_out = list()  # output list
 for (ss in 1:100) {
+
+  # simulate covariate matrix X
   xall <- matrix(rnorm(n_all * p), n_all, p)%*% LL
   X <- xall[1:n,]
   xtest <- xall[-(1:n),]
+
+  # simulate the true underlying response z_true without censoring
   z_true <- xall %*% beta_true + rnorm(n_all ,sd = 1) # rnorm(n_all ,sd = 1)
   y = z_true[1:n] ; 
+
+  # define the value of the censor
   censored <- 0 # quantile(y,probs = 1/4)
+
+  # get the censored response
   y = pmax(censored , y ) 
   ytest = z_true[-(1:n)]
   ytest = pmax(censored , ytest ) 
-  # Run Gibbs sampler
   
+  # Run Gibbs sampler for Horseshoe prior
   result_cpp <- tobit_bayes_cpp(y, X, c_sensored = censored, n_iter = 5000, burn_in = 1000) 
-  horseSH_cpp <- colMeans(result_cpp$beta_samples)
-  
+  horseSH_cpp <- colMeans(result_cpp$beta_samples)      # get posterior mean
+
+  # Run Gibbs sampler for Spike-and-slab prior
   res_SnS_cpp <- tobit_spikeslab_cpp(y, X, c_sensored = censored, n_iter = 5000, burn_in = 1000) 
-  hat_SnS_cpp <- colMeans(res_SnS_cpp$beta_samples)
-  
+  hat_SnS_cpp <- colMeans(res_SnS_cpp$beta_samples)      # get posterior mean
+
+  # run cross validation with Lasso penalty
   tnet1_cv <- cv.tobitnet(x = X, y = y, c = censored, nfolds = 5)
   tb_lasso <- c(tobitnet(x = X, y = y, c = censored , lambda1 = tnet1_cv$lambda1.min)$beta) 
+
+  # run cross validation with SCAD penalty
   tnet22_cv <- cv_tobitscad_cpp(x = X, y = y, c = censored, nlambda = 20, nfolds = 5)
   tb_scad2 <- c(tobitscad_cpp(x = X, y = y, c = censored , lambda_in = tnet22_cv$lambda.min)$beta) 
-  
+
+  # get 95% credible intervals used for variable selection in Bayesian approach
   ci_hs <- credible_intervals(result_cpp$beta_samples)
   ci_Sns <- credible_intervals(res_SnS_cpp$beta_samples)
   
-  
+  # save output
   HSout[[ss]] <-  c(sum( (horseSH_cpp - beta_true)^2 ), mean((X%*%beta_true -X%*%horseSH_cpp )^2), mean((y -pmax(X%*%horseSH_cpp,censored) )^2),mean(( pmax(ytest,censored) -pmax(xtest%*%horseSH_cpp,censored) )^2),
                     selection_metrics(c(1:s0), selected_support = (1:p)[ !(ci_hs[, "Lower"] < 0 & ci_hs[, "Upper"] > 0)] , p = p))
   scad_out[[ss]] <-   c(sum( (tb_scad2 - beta_true)^2 ), mean((X%*%beta_true -X%*%tb_scad2 )^2), mean((y -pmax(X%*%tb_scad2,censored) )^2),mean((pmax(ytest,censored)  -pmax(xtest%*%tb_scad2,censored) )^2),
@@ -62,6 +77,7 @@ for (ss in 1:100) {
 }
 rm(Sigma,LL,X,xall)
 save.image(file = 'tobit_p120n100_s04_.rda')
+
 
 
 
