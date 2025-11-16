@@ -1,0 +1,213 @@
+
+
+````r
+---
+title: "Bayesian Sparse Tobit Regression with the Horseshoe Prior"
+subtitle: "A Tutorial for the `tobitbayes` Package"
+author: "The Tien Mai"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    df_print: paged
+  pdf_document:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{tobitbayes Tutorial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.5
+)
+library(tobitbayes)
+set.seed(1)
+````
+
+# 1. Introduction
+
+The `tobitbayes` package implements **Bayesian Tobit regression** with a **Horseshoe prior**, enabling sparse estimation when the response is **left-censored** (e.g., at zero or a detection limit).
+
+This vignette provides:
+
+* A quick overview
+* Simulation of censored data
+* Fitting a sparse Tobit model
+* Interpreting posterior output
+* Visualisation and diagnostics
+* Tips and practical considerations
+
+The package is especially useful for **high-dimensional censored regression**, such as environmental exposures, genomics, and signal-processing applications.
+
+---
+
+# 2. Installation
+
+Install from GitHub:
+
+```r
+# install.packages("devtools")
+devtools::install_github("tienmt/tobitbayes")
+library(tobitbayes)
+```
+
+---
+
+# 3. Simulating Censored Data
+
+We simulate:
+
+* (n = 200) observations
+* (p = 10) predictors
+* Only two coefficients are non-zero
+* Left-censoring at 0
+
+```r
+n <- 200
+p <- 10
+
+X <- matrix(rnorm(n * p), n, p)
+
+beta_true <- c(3, -2, rep(0, p - 2))
+sigma <- 1
+
+y_latent <- X %*% beta_true + rnorm(n, 0, sigma)
+
+# Apply censoring
+c <- 0
+y <- y_latent
+y[y < c] <- c
+
+mean(y == c)   # proportion censored
+```
+
+---
+
+# 4. Fitting the Bayesian Tobit Model
+
+The main function is:
+
+```r
+res <- tobit_bayes(
+  y = y,
+  X = X,
+  censoring_point = 0,
+  n_iter = 3000,
+  burn_in = 1000,
+  thin = 2,
+  verbose = TRUE
+)
+```
+
+Key outputs include:
+
+* `res$beta_samples` — posterior draws of coefficients
+* `res$selected` — selected active predictors
+* `res$sigma2_samples` — variance parameter draws
+* (optional) latent variable draws depending on implementation
+
+---
+
+# 5. Posterior Summary
+
+## 5.1 Posterior Means
+
+```r
+beta_post_mean <- colMeans(res$beta_samples)
+beta_post_mean
+```
+
+Compare with true values:
+
+```r
+data.frame(
+  Predictor = paste0("X", 1:p),
+  True = beta_true,
+  Estimate = beta_post_mean,
+  Selected = 1:p %in% res$selected
+)
+```
+
+---
+
+## 5.2 Posterior Visualisation
+
+### Stem plot of posterior means
+
+```r
+plot(beta_post_mean, type = "h", lwd = 3,
+     main = "Posterior Means of Regression Coefficients",
+     xlab = "Coefficient Index", ylab = "Posterior Mean")
+abline(h = 0, lty = 2)
+```
+
+---
+
+### Trace plots (example for the first coefficient)
+
+```r
+plot(res$beta_samples[, 1], type = "l",
+     main = "Trace plot for beta[1]", ylab = "Value")
+```
+
+---
+
+# 6. Variable Selection
+
+The Horseshoe prior yields sparse recovery:
+
+```r
+res$selected
+```
+
+Use credible intervals for interpretation:
+
+```r
+apply(res$beta_samples, 2, function(v) mean(abs(v) > 0.05))
+```
+
+
+
+# 10. Full Example Code
+
+```r
+library(tobitbayes)
+
+set.seed(123)
+n <- 200; p <- 10
+X <- scale(matrix(rnorm(n*p), n, p))
+
+beta_true <- c(3, -2, rep(0, p-2))
+y_latent <- X %*% beta_true + rnorm(n)
+c <- 0
+y <- ifelse(y_latent < c, c, y_latent)
+
+res <- tobit_bayes(y, X, censoring_point = c,
+                   n_iter = 4000, burn_in = 1500, thin = 3)
+
+beta_post_mean <- colMeans(res$beta_samples)
+plot(beta_post_mean, type="h")
+```
+
+---
+
+# 11. Session Information
+
+```{r}
+sessionInfo()
+```
+
+---
+
+# 12. References
+
+
+* Mai, T.T. (2025). *High-dimensional Bayesian Tobit regression for censored response with Horseshoe prior*
+
