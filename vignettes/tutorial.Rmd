@@ -1,4 +1,4 @@
----
+_oi---
 title: "Bayesian Sparse Tobit Regression with the Horseshoe Prior"
 subtitle: "A Tutorial for the `tobitbayes` Package"
 author: "The Tien Mai"
@@ -184,8 +184,8 @@ y_latent <- X %*% beta_true + rnorm(n)
 c <- 0
 y <- ifelse(y_latent < c, c, y_latent)
 
-res <- tobit_bayes(y, X, censoring_point = c,
-                   n_iter = 4000, burn_in = 1500, thin = 3)
+res <- tobit_bayes(y, X, c_sensored = c,
+                   n_iter = 4000, burn_in = 1500)
 
 beta_post_mean <- colMeans(res$beta_samples)
 plot(beta_post_mean, type="h")
