@@ -95,11 +95,9 @@ The main function is:
 res <- tobit_bayes(
   y = y,
   X = X,
-  censoring_point = 0,
+  c_sensored  = 0,
   n_iter = 3000,
   burn_in = 1000,
-  thin = 2,
-  verbose = TRUE
 )
 ```
 
