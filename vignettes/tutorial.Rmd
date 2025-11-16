@@ -97,7 +97,7 @@ res <- tobit_bayes(
   X = X,
   c_sensored  = 0,
   n_iter = 3000,
-  burn_in = 1000,
+  burn_in = 1000
 )
 ```
 
@@ -126,7 +126,7 @@ data.frame(
   Predictor = paste0("X", 1:p),
   True = beta_true,
   Estimate = beta_post_mean,
-  Selected = 1:p %in% res$selected
+  Selected = res$selected
 )
 ```
 
