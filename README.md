@@ -11,7 +11,7 @@ Install the package using:
 devtools::install_github('tienmt/tobitbayes')
 
 ```
-or 
+or install with vignettes "tutorial"
 ```r
 devtools::install_github(
     "tienmt/tobitbayes", 
