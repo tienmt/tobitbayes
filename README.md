@@ -26,9 +26,11 @@ library(tobitbayes)
 
 # simulate data
 set.seed(1)
-X <- matrix(rnorm(100 * 5), 100, 5)
-beta0 <- c(2, -1, 0, 0, 0)
-y <- X %*% beta0 + rnorm(100)
+n = 100
+p = 5
+X <- matrix(rnorm(n * p), n, p)
+beta0 <- c(2, -1, rep(0,p-2) )
+y <- X %*% beta0 + rnorm(n)
 
 # censor the response to value c = 0
 y[y < 0] <- 0
