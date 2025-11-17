@@ -1,15 +1,29 @@
-# code for reproduce results in the paper
-**"High-dimensional Bayesian Tobit regression for censored response with Horseshoe prior."**
 
-Main file for simulation are:
-"simu_tobit.R"     for most simulations
-"simu_tobit_CIs.R" for simulation assesment fo credible intervals
 
-Other funtions that NEED to be loaded for runing simulations and realdata are:
-"tobit_SnS.cpp"         Rcpp function implement of spike and slab prior
-"tobit_bayes.cpp"       Rcpp function implement of Horseshoe prior
-"tobit_scad_fast.cpp"   Rcpp function implement of SCAD.
-"Gibbs_tobit_hs.R"      Auxillary functions
+# Code for Reproducing the Results in
 
-Real data can be re-produced using the code:
-"real data tobit.R"
+**“High-Dimensional Bayesian Tobit Regression for Censored Response with the Horseshoe Prior.”**
+
+This repository contains all scripts and functions required to reproduce the simulation studies and real-data analysis presented in the paper.
+
+## Main Simulation Scripts
+
+* **`simu_tobit.R`** – Primary script for running most simulation experiments.
+* **`simu_tobit_CIs.R`** – Script for evaluating the performance of credible intervals.
+
+## Required Supporting Functions
+
+The following files must be loaded before running the simulations or real-data analysis:
+
+* **`tobit_SnS.cpp`** – Rcpp implementation of the spike-and-slab prior.
+* **`tobit_bayes.cpp`** – Rcpp implementation of the Horseshoe prior.
+* **`tobit_scad_fast.cpp`** – Rcpp implementation of the SCAD penalty.
+* **`Gibbs_tobit_hs.R`** – Additional helper functions for the Gibbs sampler.
+
+## Real Data Analysis
+
+The real-data results in the paper can be reproduced using:
+
+* **`real data tobit.R`**
+
+
