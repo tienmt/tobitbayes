@@ -26,4 +26,11 @@ The real-data results in the paper can be reproduced using:
 
 * **`real data tobit.R`**
 
+## Code with Woodbyry identiy
+
+Implements comparision with Woodbyry Identity are given in folder:
+
+* **`code_with_Woodbury`**
+
+
 
