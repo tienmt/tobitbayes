@@ -13,7 +13,7 @@ This repository contains all scripts and functions required to reproduce the sim
 
 ## Required Supporting Functions
 
-The following files must be loaded before running the simulations or real-data analysis:
+The following files must be loaded before running the simulations or real-data analysis (unsing **`library(Rcpp) ; sourceCpp('*.cpp')`**):
 
 * **`tobit_SnS.cpp`** – Rcpp implementation of the spike-and-slab prior.
 * **`tobit_bayes.cpp`** – Rcpp implementation of the Horseshoe prior.
