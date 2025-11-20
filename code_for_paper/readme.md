@@ -26,7 +26,7 @@ The real-data results in the paper can be reproduced using:
 
 * **`real data tobit.R`**
 
-## Code with Woodbury identiy
+## Code with Woodbury identity
 
 Implements comparision with Woodbury Identity are given in folder:
 
