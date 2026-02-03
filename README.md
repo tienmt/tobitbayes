@@ -1,7 +1,11 @@
 # tobitbayes
 
-Bayesian sparse Tobit regression for censored response via Gibbs sampler. This is based on the paper:  
+Bayesian sparse Tobit regression for censored response via Gibbs sampler. 
+
+This is based on the paper:  
 **"High-dimensional Bayesian Tobit regression for censored response with Horseshoe prior."**
+
+The package implement efficient Woodbury identity to reduce the computational complexity in high dimensions.
 
 ## Installation
 
