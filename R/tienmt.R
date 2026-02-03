@@ -63,13 +63,25 @@ tobit_bayes <- function(y, X, c_sensored = 0,
     z[n_di] <- truncnorm::rtruncnorm(total_ndi, a = -Inf, b = c_sensored, mean = mu[n_di], sd = sqrt(sigma2))
 
     # Step 2: Sample beta
-    D_inv <- diag(1 / (tau2 * lambda2))
-    Sigma_beta <- chol2inv(chol( tXX / sigma2 + D_inv) )
-    tamtam <-  tX %*% z
-    mu_beta <-  Sigma_beta %*% tamtam  / sigma2
+    # D_inv <- diag(1 / (tau2 * lambda2))
+    # Sigma_beta <- chol2inv(chol( tXX / sigma2 + D_inv) )
+    # tamtam <-  tX %*% z
+    # mu_beta <-  Sigma_beta %*% tamtam  / sigma2
     #beta <- mvrnorm(1, mu = mu_beta, Sigma = Sigma_beta)
-    LL <- chol(Sigma_beta)
-    beta <- mu_beta + LL %*% rnorm(p)
+    # LL <- chol(Sigma_beta)
+    # beta <- mu_beta + LL %*% rnorm(p)
+    diagD <- tau2 * lambda2
+    XD <- t(tX*diagD)
+    # Compute S = sigma2 * I_n + X D X^T
+    S <- sigma2 * diag(n) + XD %*% tX
+    S_chol <- chol(S)
+    
+    # Posterior mean (stable inversion via backsolve and forwardsolve)
+    mu_beta <- t(XD) %*% backsolve(S_chol, forwardsolve(t(S_chol), z))
+    u <- rnorm(p) * sqrt(diagD)     # u ~ N(0, D)
+    v <- rnorm(n) * sqrt(sigma2)    # v ~ N(0, sigma^2 I)
+    # Sample beta (stable inversion via backsolve and forwardsolve)
+    beta <- mu_beta + u + t(XD) %*% backsolve(S_chol, forwardsolve(t(S_chol), v - X %*% u))
 
     # Step 3: Sample lambda_j^2
     beta222 <- beta^2
