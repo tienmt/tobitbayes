@@ -1,3 +1,22 @@
+
+rm(list = ls())
+
+library(tictoc)
+
+# Custom functions ----
+
+credible_intervals <- function(beta_samples, level = 0.95) {
+  alpha <- (1 - level) / 2
+  ci_mat <- apply(beta_samples, 2, function(x) {
+    c(Lower = quantile(x, probs = alpha),
+      Median = median(x),
+      Upper = quantile(x, probs = 1 - alpha))
+  })
+  ci_mat <- t(ci_mat)
+  colnames(ci_mat) <- c("Lower", "Median", "Upper")
+  return(ci_mat)
+}
+
 tobit_bayes <- function(y, X, c_sensored = 0,
                         n_iter = 2000,
                         burn_in = 500,
@@ -59,17 +78,6 @@ tobit_bayes <- function(y, X, c_sensored = 0,
     # Store results
     beta_store[iter, ] <- beta
   }
-  credible_intervals <- function(beta_samples, level = 0.95) {
-    alpha <- (1 - level) / 2
-    ci_mat <- apply(beta_samples, 2, function(x) {
-      c(Lower = quantile(x, probs = alpha),
-        Median = median(x),
-        Upper = quantile(x, probs = 1 - alpha))
-    })
-    ci_mat <- t(ci_mat)
-    colnames(ci_mat) <- c("Lower", "Median", "Upper")
-    return(ci_mat)
-  }
   ci <- credible_intervals( beta_store[(burn_in + 1):n_iter,]  , level = level)
   selected <- !(ci[, "Lower"] < 0 & ci[, "Upper"] > 0)
   # Return posterior samples (after burn-in)
@@ -78,9 +86,6 @@ tobit_bayes <- function(y, X, c_sensored = 0,
            sigma2HS = hat_sig,
            selected = selected)
 }
-
-
-
 
 tobit_bayes_WI <- function(y, X, c_sensored = 0,
                         n_iter = 2000,
@@ -159,17 +164,6 @@ tobit_bayes_WI <- function(y, X, c_sensored = 0,
     # Store results
     beta_store[iter, ] <- beta
   }
-  credible_intervals <- function(beta_samples, level = 0.95) {
-    alpha <- (1 - level) / 2
-    ci_mat <- apply(beta_samples, 2, function(x) {
-      c(Lower = quantile(x, probs = alpha),
-        Median = median(x),
-        Upper = quantile(x, probs = 1 - alpha))
-    })
-    ci_mat <- t(ci_mat)
-    colnames(ci_mat) <- c("Lower", "Median", "Upper")
-    return(ci_mat)
-  }
   ci <- credible_intervals( beta_store[(burn_in + 1):n_iter,]  , level = level)
   selected <- !(ci[, "Lower"] < 0 & ci[, "Upper"] > 0)
   # Return posterior samples (after burn-in)
@@ -178,12 +172,6 @@ tobit_bayes_WI <- function(y, X, c_sensored = 0,
            sigma2HS = hat_sig,
            selected = selected)
 }
-
-
-
-
-
-
 
 tobit_bayes_backCHol <- function(y, X, c_sensored = 0,
                            n_iter = 2000,
@@ -267,16 +255,86 @@ tobit_bayes_backCHol <- function(y, X, c_sensored = 0,
     # Store results
     beta_store[iter, ] <- beta
   }
-  credible_intervals <- function(beta_samples, level = 0.95) {
-    alpha <- (1 - level) / 2
-    ci_mat <- apply(beta_samples, 2, function(x) {
-      c(Lower = quantile(x, probs = alpha),
-        Median = median(x),
-        Upper = quantile(x, probs = 1 - alpha))
-    })
-    ci_mat <- t(ci_mat)
-    colnames(ci_mat) <- c("Lower", "Median", "Upper")
-    return(ci_mat)
+  ci <- credible_intervals( beta_store[(burn_in + 1):n_iter,]  , level = level)
+  selected <- !(ci[, "Lower"] < 0 & ci[, "Upper"] > 0)
+  # Return posterior samples (after burn-in)
+  list(    beta_samples = beta_store[(burn_in + 1):n_iter, ],
+           full_beta = beta_store,
+           sigma2HS = hat_sig,
+           selected = selected)
+}
+
+tobit_bayes_WI_backCHol <- function(y, X, c_sensored = 0,
+                           n_iter = 2000,
+                           burn_in = 500,
+                           a0 = 1,
+                           b0 = .1,
+                           level = 0.95) {
+  n <- length(y)
+  p <- ncol(X)
+  # Initialization
+  beta <- rep(0, p)
+  sigma2 <- 1
+  tau2 <- 1
+  xi <- 1
+  lambda2 <- rep(1, p)
+  nu <- rep(1, p)
+  z <- y
+  d_i = y > c_sensored
+  n_di = !d_i;
+  total_ndi = sum(n_di)
+  tXX <- crossprod(X)
+  tX <- t(X)
+  # Storage
+  beta_store <- matrix(NA, nrow = n_iter, ncol = p)
+  hat_sig <- 0.1
+  
+  for (iter in 1:n_iter) {
+    # Step 1: Sample latent z
+    mu <- X %*%beta
+    z[n_di] <- truncnorm::rtruncnorm(total_ndi, a = -Inf, b = c_sensored, mean = mu[n_di], sd = sqrt(sigma2))
+    
+    # Step 2: Sample beta (Woodbury version, stable)
+    diagD <- tau2 * lambda2
+    XD <- t(tX*diagD)
+    
+    # Compute S = sigma2 * I_n + X D X^T
+    S <- sigma2 * diag(n) + XD %*% tX
+    
+    # Numerically stable inversion via Cholesky
+    S_chol <- chol(S)
+    
+    # Posterior mean (stable inversion via backsolve and forwardsolve)
+    mu_beta <- t(XD) %*% backsolve(S_chol, forwardsolve(t(S_chol), z))
+    
+    # Random draws
+    u <- rnorm(p) * sqrt(diagD)     # u ~ N(0, D)
+    v <- rnorm(n) * sqrt(sigma2)    # v ~ N(0, sigma^2 I)
+    
+    # Sample beta (stable inversion via backsolve and forwardsolve)
+    beta <- mu_beta + u + t(XD) %*% backsolve(S_chol, forwardsolve(t(S_chol), v - X %*% u))
+    
+    # Step 3: Sample lambda_j^2
+    beta222 <- beta^2
+    rate_lambda <- 1 / nu + beta222 / (2*tau2)
+    lambda2 <- sapply(rate_lambda, function(x) 1 / rgamma(1, shape = 1, rate = x ) )
+    # Step 4: Sample nu_j
+    #  for (j in 1:p) { nu[j] <- 1 / rgamma(1, shape = 1, rate = 1 + 1 / lambda2[j])   }
+    nu <- sapply(lambda2, function(x) 1 / rgamma(1, shape = 1, rate = 1 + 1/x )  )
+    # Step 5: Sample tau^2
+    rate_tau <- 1 / xi + sum(beta222 / lambda2) / 2
+    tau2 <- 1 / rgamma(1, shape = (p + 1)/2, rate = rate_tau)
+    # Step 6: Sample xi
+    xi <- 1 / stats::rgamma(1, shape = 1, rate = 1 + 1 / tau2)
+    
+    # Step 7: Sample sigma^2
+    resid <- z - X %*% beta
+    rate_sigma <- b0 + sum(resid^2) / 2
+    sigma2 <- 1 / rgamma(1, shape = a0 + n/2, rate = rate_sigma)
+    
+    if (iter>burn_in) hat_sig <- hat_sig + sigma2/(n_iter-burn_in)
+    # Store results
+    beta_store[iter, ] <- beta
   }
   ci <- credible_intervals( beta_store[(burn_in + 1):n_iter,]  , level = level)
   selected <- !(ci[, "Lower"] < 0 & ci[, "Upper"] > 0)
@@ -287,12 +345,13 @@ tobit_bayes_backCHol <- function(y, X, c_sensored = 0,
            selected = selected)
 }
 
+# Simulate data ----
 
-# Simulate data
 n <- 100
 n_test <- 1000
 n_all = n + n_test
 p <- 300
+
 xall <- matrix(rnorm(n_all * p), n_all, p)
 X <- xall[1:n,]
 xtest <- xall[-(1:n),]
@@ -305,14 +364,17 @@ y = z_true[1:n] ;
 censored <- quantile(y,probs = 1/3)
 y = pmax(censored , y ) 
 
-library(tictoc)
+# Fit the Gibbs samplers ----
 
-# fit the Gibbs sampler
-tic(); res <- tobit_bayes(y, X,n_iter = 5000,  burn_in = 1000); toc()
-tic(); res2 <- tobit_bayes_WI(y, X,n_iter = 5000,  burn_in = 1000); toc()
-tic(); res3 <- tobit_bayes_backCHol(y, X,  n_iter = 5000,  burn_in = 1000); toc()
+n_iter = 5000
+burn_in = 1000
+
+tic(); res <- tobit_bayes(y, X,n_iter = n_iter,  burn_in = burn_in); toc()
+tic(); res2 <- tobit_bayes_WI(y, X,n_iter = n_iter,  burn_in = burn_in); toc()
+tic(); res3 <- tobit_bayes_backCHol(y, X,  n_iter = n_iter,  burn_in = burn_in); toc()
+tic(); res4 <- tobit_bayes_WI_backCHol(y, X,n_iter = n_iter,  burn_in = burn_in); toc()
 
 colMeans(res$beta_samples) [1:s0]
 colMeans(res2$beta_samples) [1:s0]
 colMeans(res3$beta_samples) [1:s0]
-
+colMeans(res4$beta_samples) [1:s0]
